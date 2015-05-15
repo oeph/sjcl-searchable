@@ -1,14 +1,16 @@
 express = require 'express'
 cons = require 'consolidate'
 caesar = require 'caesar'
+logger = require 'morgan'
+bodyParser = require 'body-parser'
 
 app = express()
 app.engine 'html', cons.handlebars
 app.set 'view engine', 'html'
 app.set 'views', __dirname
-app.use express.logger 'dev'
+app.use logger 'dev'
 app.use express.static __dirname + '/../'
-app.use express.bodyParser()
+app.use bodyParser.urlencoded {extended:false}
 
 exports.server = new caesar.searchable.Server {}
 exports.entries = {}
@@ -18,6 +20,8 @@ app.get '/', (req, res) ->
     view =
         keystore: escape exports.keystore
         entries: exports.entries
+
+    console.log view
     
     res.render './index.html', view
 
@@ -45,9 +49,16 @@ app.post '/post', (req, res) ->
     
     # Attempt to merge the index.
     out = exports.server.update domain, index, replaces
+
+    console.log "domain: ", domain
+    console.log "index: ", index
+    console.log "replaces: ", replaces
     
     if entry? then exports.entries[id] = entry
     exports.keystore = keystore
+
+    console.log "keystore: ", exports.keystore
+    console.log "entries: ", exports.entries
     
     # Route the user back to the homepage; the merge was successful.
     if out is true then res.redirect '/'
@@ -68,6 +79,10 @@ app.post '/post', (req, res) ->
 app.post '/search', (req, res) ->
     # Get and verify query.
     queries = req.param 'query'
+
+    console.log "----> query: ", queries
+
+    console.log "<---- query END"
     
     if not queries? or typeof queries isnt 'string'
         return res.send 'Missing data!'
@@ -86,6 +101,8 @@ app.post '/search', (req, res) ->
     view =
         keystore: escape exports.keystore
         entries: results
+
+    console.log view
     
     res.render './index.html', view
 
